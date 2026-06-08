@@ -2,14 +2,22 @@ import streamlit as st
 import pandas as pd
 import joblib as jb
 
-# Load saved files
+# Load model files
 model = jb.load("model.pkl")
 scaler = jb.load("scaler.pkl")
+expected_columns = jb.load("columns.pkl")
+
+# Page config
+st.set_page_config(
+    page_title="Titanic Survival Predictor",
+    page_icon="🚢",
+    layout="centered"
+)
 
 st.title("🚢 Titanic Survival Prediction")
-st.markdown("Enter passenger details to predict survival")
+st.write("Enter passenger details and predict survival chances.")
 
-# User Inputs
+# Inputs
 pclass = st.selectbox("Passenger Class", [1, 2, 3])
 
 sex = st.selectbox(
@@ -25,14 +33,14 @@ age = st.number_input(
 )
 
 sibsp = st.number_input(
-    "Siblings/Spouses aboard",
+    "Siblings/Spouses Aboard",
     min_value=0,
     max_value=10,
     value=0
 )
 
 parch = st.number_input(
-    "Parents/Children aboard",
+    "Parents/Children Aboard",
     min_value=0,
     max_value=10,
     value=0
@@ -52,56 +60,62 @@ embarked = st.selectbox(
 
 alone = st.selectbox(
     "Traveling Alone",
-    [0, 1],
-    format_func=lambda x: "Yes" if x == 1 else "No"
+    [True, False]
 )
 
-if st.button("Predict"):
-
-    # Same encoding used during training
-
-    sex_encoded = 1 if sex == "male" else 0
-
-    embarked_map = {
-        "C": 0,
-        "Q": 1,
-        "S": 2
-    }
-
-    embarked_encoded = embarked_map[embarked]
-
-    input_data = pd.DataFrame({
-        "pclass": [pclass],
-        "sex": [sex_encoded],
-        "age": [age],
-        "sibsp": [sibsp],
-        "parch": [parch],
-        "fare": [fare],
-        "embarked": [embarked_encoded],
-        "alone": [alone]
-    })
+# Prediction
+if st.button("Predict Survival"):
 
     try:
-        # Scale input
+
+        # Match training data
+        input_data = pd.DataFrame({
+            "pclass": [pclass],
+            "sex": [sex],
+            "age": [age],
+            "sibsp": [sibsp],
+            "parch": [parch],
+            "fare": [fare],
+            "embarked": [embarked],
+            "alone": [alone]
+        })
+
+        # Same preprocessing used during training
+        input_data["sex"] = input_data["sex"].map({
+            "female": 0,
+            "male": 1
+        })
+
+        input_data["alone"] = input_data["alone"].astype(int)
+
+        input_data["embarked"] = input_data["embarked"].map({
+            "C": 0,
+            "Q": 1,
+            "S": 2
+        })
+
+        # Same as training
+        input_data = pd.get_dummies(input_data)
+
+        input_data = input_data.reindex(
+            columns=expected_columns,
+            fill_value=0
+        )
+
+        # Scale
         input_scaled = scaler.transform(input_data)
 
         # Predict
         prediction = model.predict(input_scaled)
-        probability = model.predict_proba(input_scaled)
-
-        survival_prob = probability[0][1] * 100
 
         if prediction[0] == 1:
-            st.success(
-                f"✅ Passenger is likely to survive ({survival_prob:.2f}% chance)"
-            )
+            st.success("✅ Passenger is likely to survive.")
         else:
-            st.error(
-                f"❌ Passenger is unlikely to survive ({100-survival_prob:.2f}% chance)"
-            )
+            st.error("❌ Passenger is unlikely to survive.")
 
-        st.write("### Input Data")
-        st.dataframe(input_data)
+        # Show processed data
+        with st.expander("Processed Input"):
+            st.dataframe(input_data)
 
     except Exception as e:
         st.error(f"Prediction Error: {e}")
