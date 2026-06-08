@@ -5,7 +5,7 @@ accuracy=80%
 f1_score=81%
 made with svm algorithm
 A Machine Learning web application built using Streamlit that predicts whether a passenger would survive the Titanic disaster based on passenger information.
-
+see project:https://titanic-survival-predection-1.onrender.com
 ## 📌 Project Overview
 
 This project uses a trained Machine Learning classification model to predict passenger survival on the Titanic dataset. Users can enter passenger details through a simple web interface and receive an instant prediction.
